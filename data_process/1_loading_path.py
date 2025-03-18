@@ -12,7 +12,6 @@ import pdb
 TEMP_NUM = 1000
 data_dir = "/ailab/group/pjlab-ai4s/ai4astro/Deep_space_explore/hst_data/"
 output_file = "fits_regions.txt"
-
 fits_files = []
 for root, _, files in os.walk(data_dir):
     for file in files:
@@ -22,7 +21,6 @@ for root, _, files in os.walk(data_dir):
                 break
     if len(fits_files) >= TEMP_NUM:
         break
-    
 with open(output_file, 'w') as f:
     for fits_filepath in tqdm(fits_files, desc="Processing FITS files"):
         try:
@@ -44,5 +42,4 @@ with open(output_file, 'w') as f:
         except Exception as e:
             print(f"Error processing {fits_filepath}: {e}")
             continue
-
 print(f"Done! Results saved to {output_file}")

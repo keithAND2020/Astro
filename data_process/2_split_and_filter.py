@@ -4,12 +4,8 @@ import numpy as np
 from shapely.wkt import loads
 from astropy.io import fits
 from tqdm import tqdm
-
-# 1. 读取 fits_regions.txt 文件
 with open("fits_regions.txt", "r") as f:
     lines = f.readlines()
-
-# 2. 过滤数据，仅保留 NCOMBINE >= 4 的文件
 filtered_data = []
 total_before = len(lines)
 
@@ -22,14 +18,13 @@ for line in tqdm(lines):
             if ncombine >= 4:
                 filtered_data.append((fits_filepath, wkt_str))
     except Exception as e:
-        print(f"处理 {fits_filepath} 失败: {e}")
+        print(f"Processing {fits_filepath} fail: {e}")
 
 total_after = len(filtered_data)
-print(f"过滤前的文件数量: {total_before}")
-print(f"过滤后的文件数量: {total_after}")
+print(f"{total_before}")
+print(f"{total_after}")
 train_files = []
 eval_files = []
-
 for fits_filepath, wkt_str in filtered_data:
     try:
         polygon = loads(wkt_str)
@@ -41,7 +36,7 @@ for fits_filepath, wkt_str in filtered_data:
         elif min_ra > 255:
             eval_files.append(fits_filepath)
     except Exception as e:
-        print(f"处理 {fits_filepath} 失败: {e}")
+        print(f"processing {fits_filepath} failed: {e}")
 def patchify(image, mask, patch_size, stride, useful_region_th=0.5):
     patches = []
     h, w = image.shape
@@ -57,7 +52,6 @@ def patchify(image, mask, patch_size, stride, useful_region_th=0.5):
                 coordinate = [x_idx, y_idx]
                 patches.append((image_patch, mask_patch, coordinate))
     return patches
-
 def load_data(file_path):
     with fits.open(file_path) as hdul:
         img_data = hdul[1].data
@@ -90,13 +84,12 @@ def process_and_save_patches(fits_filepath, output_dir, patch_size, stride, usef
         print(f"processing {len(patches)} 个 patch 到 {patch_dir}")
     
     except Exception as e:
-        print(f"处理 {fits_filepath} 时出错: {e}")
+        print(f"processing {fits_filepath} failed {e}")
 
 patch_size = 256
 stride = patch_size // 2
 train_patch_dir = "train_patches"
 eval_patch_dir = "eval_patches"
-
 os.makedirs(train_patch_dir, exist_ok=True)
 os.makedirs(eval_patch_dir, exist_ok=True)
 
@@ -106,4 +99,4 @@ for fits_filepath in tqdm(train_files, desc="Processing train files"):
 for fits_filepath in tqdm(eval_files, desc="Processing eval files"):
     process_and_save_patches(fits_filepath, train_patch_dir, patch_size=patch_size, stride=stride)
 
-print("所有 patch 已保存完成！")
+print("All done")
