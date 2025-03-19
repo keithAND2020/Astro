@@ -5,6 +5,6 @@ todo list
 - Redo Dataset ()  
   - Split the data set (according to wcs) (√) Mar.17 by WGC
   - patchify (√) Mar.18 by WGC
-  - PSF and downsampling ()
+  - PSF and downsampling (√) Mar.18 by WGC
 - Running the first super-resolution model ()
 - Design consistency loss ()
