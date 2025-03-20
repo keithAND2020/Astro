@@ -2,9 +2,9 @@ import os
 import numpy as np
 from tqdm import tqdm
 from psf_downsampling_3 import degrade_patch 
-train_patches_dir = '/ailab/user/wuguocheng/AstroIR/tools/creat_dataset/new_create_dataset/train_patches/hst_9075_3x_acs_wfc_total_j6fl3x_drc'
-train_lr_dir = '/ailab/user/wuguocheng/AstroIR/tools/creat_dataset/new_create_dataset/train_lr'
-file_txt_path = '/ailab/user/wuguocheng/AstroIR/tools/creat_dataset/new_create_dataset/file.txt'
+train_patches_dir = '/ailab/user/wuguocheng/Astro_SR/dataset/train_patches/hst_9444_01_acs_wfc_f814w_j6lk01_drc'
+train_lr_dir = '/ailab/user/wuguocheng/Astro_SR/dataset/train_lr_patch'
+file_txt_path = '/ailab/user/wuguocheng/Astro_SR/data_process/trainfile.txt'
 
 os.makedirs(train_lr_dir, exist_ok=True)
 scale_factor = 2
@@ -27,4 +27,4 @@ with open(file_txt_path, 'a') as f:
     for path in file_paths:
         f.write(path + '\n')
 
-print("低分辨率图像生成和 file.txt 更新完成！")
+print("Low resolution image generation and file.txt update completed")

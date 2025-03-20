@@ -25,9 +25,12 @@ def main():
     trainloader, evalloader = build_dataloaders(**configs['dataset'])
 
     net = build_models(logger, **configs['model']).to('cuda')
-    if args.evalute:
+    if args.evaluate:
         tester = build_tester(net, evalloader, **configs['test'])
         tester.eval()
+        print('done')
+        exit()
+
     trainer = build_trainer(net, logger, trainloader, evalloader, **configs['train'])
     trainer.train()
 

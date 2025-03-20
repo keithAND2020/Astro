@@ -1,14 +1,12 @@
 seed = 42,
-train = dict(max_epoch=20,
-            save_ckp_epoch=1,
-            eval_epoch=1,
+train = dict(max_epoch=60,
+            save_ckp_epoch=10,
+            eval_epoch=10,
             display_iter=10,
-            grad_clip=None,
+            grad_clip=None, #dict(max_norm=20, norm_type=2),
             optimizer=dict(
                 type='Adam',
-                lr=0.01,
-                weight_decay=1e-5,
-                ),   
+                lr=1e-3),   
             scheduler=dict(
                  warm_up = dict(
                       type='linear',
@@ -18,12 +16,13 @@ train = dict(max_epoch=20,
                       bound_unit='epoch',
                  ),
                  lr_decay=dict(
-                      type='step',  #cos, step
+                      type='cos',  #cos, step
                       step_type='iter',
-                      decay_ratio=0.1,  # step decay parameters
-                      steps=[10],
+                      # decay_ratio=0.1,  # step decay parameters
+                      steps=[40],
                       steps_unit='epoch')      
             )),
+
 # train = dict(max_epoch=400,
 #                save_ckp_epoch=10,
 #                eval_epoch=1,
@@ -75,25 +74,18 @@ test = dict(vis_dir='vis'),
 #              )  
 model = dict(type='Simple_baseline',
              #n_channels=2, 
-             
              initializer='gaussian',  #gaussian, kaiming, classifier, xavier
              bilinear=False,
                #bilinear cannot reproduce
              losses=dict(
                      SmoothL1_loss=dict(type='Smooth_L1', 
-                                        weight=20.0
+                                        weight=1.0
                                         ))
-
              ),
 
 dataset=dict(type='SR_astro',
-          root_dir='/home/bingxing2/ailab/group/ai4astro/Datasets/astronomy/RSD_correction/data.hdf5',
-          gala_or_halos='halos',
-          mass_threshold=10**2.0,
-          Mpc_threshold=50.0**2, # 球半径
-          disk_root='./data',
-          batch_size=30,
-          num_worker=8
+          batch_size=8,
+          num_worker=6
                )
 
           

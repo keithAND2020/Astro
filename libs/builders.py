@@ -3,15 +3,18 @@ import math
 import torch
 from torch.utils.data import DataLoader
 
+from .models.loss_function import *
 from .models import MODEL
 from .dataset import *
 from .trainer import Trainer
+from .tester import Tester
+from .scheduler import Scheduler
 
 from torch import optim
 from torch.utils.data import DistributedSampler as _DistributedSampler
-import pdb
+ 
 import numpy as np
-from .tester import Tester
+
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
@@ -40,8 +43,8 @@ class DistributedSampler(_DistributedSampler):
         return iter(indices)
 
 
-# def build_losses(type,weight=1.0,**kargs):
-#     return general_loss(weight,globals()[type](**kargs))
+def build_losses(type,weight=1.0,**kargs):
+    return general_loss(weight,globals()[type](**kargs))
 
 def build_models(logger, type,checkpoint,**kargs):
     net = MODEL[type](**kargs)
@@ -77,16 +80,14 @@ def build_trainer(model,
                  trainloader, 
                  evalloader,
                  optimizer,
+                 scheduler,
                  **kargs):
     optimizer = build_optimizer(model,optimizer)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=kargs['max_epoch'], eta_min=1e-10)
+    scheduler_func = Scheduler(epoch_iter=len(trainloader), max_epoch=kargs['max_epoch'],**scheduler)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=scheduler_func)
     trainer = Trainer(model, optimizer, scheduler, trainloader, evalloader, logger, **kargs)
-
-    logger.info(optimizer)
-    logger.info(scheduler)
-    logger.info(f"eval data length:{len(evalloader.dataset)}")
-    logger.info(f"train data length:{len(trainloader.dataset)}")
     return trainer
+
 
 def build_tester(model, evalloader, **kargs):
     tester = Tester(model, evalloader, **kargs)
@@ -94,8 +95,8 @@ def build_tester(model, evalloader, **kargs):
 
 def build_dataloaders(type, batch_size, num_workers, ddp=False, local_rank=0, world_size=None, **kargs):
     trainset = globals()[type](split='train',**kargs)
-    pdb.set_trace()
-    trainset[500]
+
+    trainset[100]
     evalset = globals()[type](split='eval',**kargs)
     if ddp:
         train_sampler = DistributedSampler(trainset, world_size, local_rank, shuffle=True)

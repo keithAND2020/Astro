@@ -6,12 +6,10 @@ import numbers
 
 from einops import rearrange
 
-# 陆总框架需要
 from . import MODEL
 from .base_model import Base_Model
 from .model_init import *
 
-# rules需要
 from einops import repeat, rearrange
 
 
@@ -188,7 +186,6 @@ class Upsample(nn.Module):
 
 ##########################################################################
 ##---------- Restormer -----------------------
-@MODEL.register
 class Restormer(nn.Module):
     def __init__(self,
                  inp_channels=3,

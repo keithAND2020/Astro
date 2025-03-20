@@ -34,4 +34,16 @@ class Tester(object):
 
     def eval(self):
         self.model.eval()
+        for datalist in self.evalloader:  
+            infer_datalist = datalist.copy()
+            for key in infer_datalist.keys():
+                if type(infer_datalist[key]) is torch.Tensor:
+                    infer_datalist[key] = infer_datalist[key].to('cuda')
+            with torch.no_grad():
+                results = self.model(infer_datalist['input'], infer_datalist)
+                pdb.set_trace()
+                results = {key:results[key].cpu() if type(results[key]) is torch.Tensor else results[key] for key in results.keys()}
+            #eval_string, eval_dict = evaluate_metric(results, datalist, self.ddp)
+            #if self.visualize: vis_results(results, datalist, self.vis_dir)
+
         

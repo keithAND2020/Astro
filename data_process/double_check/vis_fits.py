@@ -15,7 +15,6 @@ def load_data(file_path):
         img_data = hdul[1].data.astype(float)  # 确保数据类型为浮点数，支持 NaN
 
         # 步骤 2：检测连续全 0 区域
-        # 创建一个掩码，标记所有为 0 的像素
         zero_mask = (img_data == 0)
 
         # 使用形态学腐蚀操作，识别连续全 0 区域

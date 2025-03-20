@@ -1,15 +1,9 @@
-import torch.nn as nn
+_base_='../default.py'
 seed = 42,
-train = dict(max_epoch=100,
-             ddp=True,
-             optimizer=dict(
-                 type='Adam',
-                 lr=0.002,
-                 betas=(0.9, 0.999),),
-             ),
+train = dict(optimizer=dict(lr=1e-4))
 model = dict(type='SwinIR',
-             img_size=256, patch_size=1, in_chans=1, out_chans=1,
-             embed_dim=180, depths=[6, 6, 6, 6], num_heads=[6, 6, 6, 6],
+             img_size=128, patch_size=1, in_chans=1, out_chans=1,
+             embed_dim=90, depths=[6, 6, 6, 6], num_heads=[6, 6, 6, 6],
              window_size=8, mlp_ratio=2., upscale=2, img_range=1.,
              upsampler='pixelshuffledirect', resi_connection='1conv'
              ),
@@ -26,9 +20,8 @@ model = dict(type='SwinIR',
 
 
 dataset = dict(type='SR_dataset',
-               batch_size=32,
-               num_workers=16,
+               batch_size=8,
+               num_workers=6,
                root_dir='/ailab/user/wuguocheng/AstroIR/tools/creat_dataset/new_create_dataset/train_patches',
-               filenames_file_train='/ailab/user/wuguocheng/AstroIR/tools/creat_dataset/new_create_dataset/file.txt'
-               
+               filenames_file_train='/ailab/user/wuguocheng/Astro_SR/dataload_filename/trainfile.txt'
                )

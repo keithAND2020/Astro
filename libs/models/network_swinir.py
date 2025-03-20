@@ -9,13 +9,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-
-# 陆总框架需要
 from . import MODEL
 from .base_model import Base_Model
 from .model_init import *
 
-# rules需要
+
 from einops import repeat, rearrange
 
 
@@ -623,7 +621,7 @@ class UpsampleOneStep(nn.Sequential):
         return flops
 
 @MODEL.register
-class SwinIR(nn.Module):
+class SwinIR(Base_Model):
     r""" SwinIR
         A PyTorch impl of : `SwinIR: Image Restoration Using Swin Transformer`, based on Swin Transformer.
 
@@ -658,7 +656,7 @@ class SwinIR(nn.Module):
                  norm_layer=nn.LayerNorm, ape=False, patch_norm=True,
                  use_checkpoint=False, upscale=1, img_range=1., upsampler='', resi_connection='1conv',
                  **kwargs):
-        super(SwinIR, self).__init__()
+        super(SwinIR, self).__init__(**kwargs)
         num_in_ch = in_chans
         num_out_ch = out_chans
         num_feat = 64
@@ -809,13 +807,13 @@ class SwinIR(nn.Module):
         x = self.patch_unembed(x, x_size)
 
         return x
+    def forward_inp(self, x):
 
-    def forward(self, x):
         H, W = x.shape[2:]
         x = self.check_image_size(x)
 
-        self.mean = self.mean.type_as(x)
-        x = (x - self.mean) * self.img_range
+        # self.mean = self.mean.type_as(x)
+        # x = (x - self.mean) * self.img_range
 
         if self.upsampler == 'pixelshuffle':
             # for classical SR
@@ -843,10 +841,18 @@ class SwinIR(nn.Module):
             x = x + self.conv_last(res)
 
 
-        x = x / self.img_range + self.mean
-
+        # x = x / self.img_range + self.mean
         return x[:, :, :H*self.upscale, :W*self.upscale]
 
+    def forward(self, x, targets=None):
+        pred_img = self.forward_inp(x)
+        if self.training:
+            losses = dict(l1_loss = (torch.abs(pred_img - targets['hr'])*targets['mask']).sum()/(targets['mask'].sum() + 1e-3))
+            total_loss = torch.stack([*losses.values()]).sum()
+            return total_loss, losses
+        else:
+            return dict(pred_img = pred_img)
+        
     def flops(self):
         flops = 0
         H, W = self.patches_resolution
