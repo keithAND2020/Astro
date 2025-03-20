@@ -24,7 +24,7 @@ for root, _, files in os.walk(data_dir):
 with open(output_file, 'w') as f:
     for fits_filepath in tqdm(fits_files, desc="Processing FITS files"):
         try:
-            pdb.set_trace()
+
             hdu = fits.open(fits_filepath)[1]
             wcs = WCS(hdu.header)
             x = [1, hdu.data.shape[1], hdu.data.shape[1], 1]
