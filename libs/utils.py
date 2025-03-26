@@ -28,14 +28,17 @@ import matplotlib.animation as animation
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 
 from torch import default_generator, randperm
 
+from astropy.io import fits
 
-
+from matplotlib.colors import Normalize
+from skimage.metrics import structural_similarity as ssim
+from skimage.metrics import peak_signal_noise_ratio as psnr
 def init_logger(config):
     log_file = os.path.join(config['train']['log_dir'],'train.log')
     rank = config['train']['local_rank']
@@ -206,3 +209,84 @@ def get_dist_info():
     return rank, world_size
 
 
+def fits_vis(ori_array):
+    from astropy.visualization import ZScaleInterval
+    from matplotlib.colors import Normalize
+    import matplotlib.pyplot as plt
+    z = ZScaleInterval()
+    z1,z2 = z.get_limits(ori_array)
+    norm = Normalize(vmin=z1, vmax=z2)
+    normalized_array = norm(ori_array)
+    cmap = plt.get_cmap('gray')
+    wave_array = cmap(normalized_array)
+    wave_array = (wave_array[..., 0]*255).astype(np.uint8)
+    return wave_array
+
+
+def vis_astro_SR(pred, target, input_img, name, vis_dir):
+    # 将输入转换为可视化格式
+    input_vis = fits_vis(np.squeeze(input_img))
+    pred_vis = fits_vis(np.squeeze(pred))
+    target_vis = fits_vis(np.squeeze(target))
+
+    # 获取图像的尺寸
+    input_size = input_vis.shape[0]  # 例如 128
+    hr_size = pred_vis.shape[0]      # 例如 256
+
+    # 创建一个 1x3 的子图布局，宽度比例根据图像尺寸调整
+    fig = plt.figure(figsize=(15, 5))
+    gs = gridspec.GridSpec(1, 3, width_ratios=[input_size/hr_size, 1, 1])
+
+    # 子图 1：低分辨率输入图像
+    ax1 = fig.add_subplot(gs[0])
+    ax1.imshow(input_vis, cmap='gray', extent=[0, input_size, 0, input_size])
+    ax1.set_title('Input (LR)')
+    ax1.set_aspect('equal')  # 保持宽高比
+    ax1.axis('off')
+
+    # 子图 2：预测高分辨率图像
+    ax2 = fig.add_subplot(gs[1])
+    ax2.imshow(pred_vis, cmap='gray', extent=[0, hr_size, 0, hr_size])
+    ax2.set_title('Prediction (HR)')
+    ax2.set_aspect('equal')
+    ax2.axis('off')
+
+    # 子图 3：目标高分辨率图像
+    ax3 = fig.add_subplot(gs[2])
+    ax3.imshow(target_vis, cmap='gray', extent=[0, hr_size, 0, hr_size])
+    ax3.set_title('Target (HR)')
+    ax3.set_aspect('equal')
+    ax3.axis('off')
+
+    # 调整布局并保存
+    plt.tight_layout()
+    save_path = os.path.join(vis_dir, f"{name}_vis.png")
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"可视化图像已保存到 {save_path}")
+
+
+def evaluate_metric_SR(pred, target, mask):
+    batch_ssim = 0.0
+    batch_psnr = 0.0
+    num_images = pred.size(0)
+
+    for i in range(num_images):
+        pred_i = pred[i].numpy().transpose(1, 2, 0)  
+        target_i = target[i].numpy().transpose(1, 2, 0)
+        mask_i = mask[i].numpy().transpose(1, 2, 0).astype(bool)
+        pred_valid = pred_i[mask_i]
+        target_valid = target_i[mask_i]
+
+        if len(pred_valid) > 0:
+            ssim_value = ssim(target_valid, pred_valid, 
+                            data_range=target_valid.max() - target_valid.min(), 
+                            multichannel=True)
+            psnr_value = psnr(target_valid, pred_valid, 
+                            data_range=target_valid.max() - target_valid.min())
+            batch_ssim += ssim_value
+            batch_psnr += psnr_value
+
+    batch_ssim = batch_ssim / num_images if num_images > 0 else 0.0
+    batch_psnr = batch_psnr / num_images if num_images > 0 else 0.0
+    return batch_ssim, batch_psnr

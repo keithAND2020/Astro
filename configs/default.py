@@ -1,7 +1,7 @@
 seed = 42,
-train = dict(max_epoch=60,
-            save_ckp_epoch=10,
-            eval_epoch=10,
+train = dict(max_epoch=10,
+            save_ckp_epoch=1,
+            eval_epoch=1,
             display_iter=10,
             grad_clip=None, #dict(max_norm=20, norm_type=2),
             optimizer=dict(

@@ -17,9 +17,8 @@ class SR_dataset(Dataset):
             with open(kargs['filenames_file_train'], 'r') as f:
                 self.filenames = [line.strip() for line in f.readlines() if line.startswith('train')]
         elif split == 'eval':
-            pass
-            # with open(kargs.get['filenames_file_eval'], 'r') as f:
-            #     self.filenames = [line.strip() for line in f.readlines() if line.startswith('eval')]
+            with open(kargs['filenames_file_eval'], 'r') as f:
+                self.filenames = [line.strip() for line in f.readlines() if line.startswith('eval')]
         else:
             raise ValueError("split must be 'train' or 'eval'")
 
@@ -29,11 +28,12 @@ class SR_dataset(Dataset):
     def __getitem__(self, index):
         line = self.filenames[index]
         _, hr_file_path, lr_file_path = line.split(',')
+        
         hr_data = np.load(hr_file_path, allow_pickle=True).item()
         hr_image = hr_data['image'] 
         mask = hr_data['mask']
         lr_image = np.load(lr_file_path)
-        #!  temp
+        ''' temp for vis
         # from astropy.visualization import (ZScaleInterval, ImageNormalize)
         # import matplotlib.pyplot as plt
         # norm1 = ImageNormalize(hr_image, interval=ZScaleInterval())
@@ -46,22 +46,20 @@ class SR_dataset(Dataset):
         # plt.imshow(lr_image, cmap='gray', norm=norm2)
         # plt.title('Low Resolution Image')
         # plt.savefig('/ailab/user/wuguocheng/Astro_SR/vis/vis_hr_lr.png')
-        # pdb.set_trace()        
+        # pdb.set_trace()   
+        '''
         hr_image = self.normalize(hr_image, mask)
         lr_image = self.normalize(lr_image)
         
         hr_image = np.expand_dims(hr_image, axis=0)
         lr_image = np.expand_dims(lr_image, axis=0)
-
         mask = torch.from_numpy(mask).float()
         mask = np.expand_dims(mask, axis=0)
         return {'input': torch.from_numpy(lr_image).float(), 
                 'hr': torch.from_numpy(hr_image).float(), 
                 'mask': mask,
-                'filename': line}
-
-
-
+                'filename': hr_file_path.split('/')[-1],
+                'item': index}
 
     def normalize(self, image, mask=None):
         if mask is not None:
@@ -73,7 +71,7 @@ class SR_dataset(Dataset):
                 min_val = 0
                 max_val = 1
             image_normalized = (image - min_val) / (max_val - min_val + 1e-8)
-            image_normalized[~mask] = 0  # NaN 区域设为 0
+            image_normalized[~mask] = 0  
         else:
             min_val = np.min(image)
             max_val = np.max(image)

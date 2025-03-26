@@ -9,7 +9,7 @@ from .dataset import *
 from .trainer import Trainer
 from .tester import Tester
 from .scheduler import Scheduler
-
+from torch.utils.data import Subset
 from torch import optim
 from torch.utils.data import DistributedSampler as _DistributedSampler
  
@@ -90,14 +90,16 @@ def build_trainer(model,
 
 
 def build_tester(model, evalloader, **kargs):
+
     tester = Tester(model, evalloader, **kargs)
     return tester
 
 def build_dataloaders(type, batch_size, num_workers, ddp=False, local_rank=0, world_size=None, **kargs):
     trainset = globals()[type](split='train',**kargs)
-
-    trainset[100]
     evalset = globals()[type](split='eval',**kargs)
+    # temp
+    evalset = Subset(evalset, range(2000))
+
     if ddp:
         train_sampler = DistributedSampler(trainset, world_size, local_rank, shuffle=True)
         val_sampler = DistributedSampler(evalset, world_size, local_rank, shuffle=False)

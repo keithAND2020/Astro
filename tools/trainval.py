@@ -22,6 +22,7 @@ def main():
     parser.add_argument('--tcp_port', type=int, default=18888, help='tcp port for distrbuted training')
     args = parser.parse_args()
     configs, logger = init_all(args)
+
     trainloader, evalloader = build_dataloaders(**configs['dataset'])
 
     net = build_models(logger, **configs['model']).to('cuda')
