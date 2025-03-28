@@ -12,7 +12,12 @@ This repo is used for super-resolution in astronomy.
   - PSF and downsampling (√) Mar.18 by WGC
 - Running the first super-resolution model (√) Mar.20 by WGC
 - Design consistency loss ()
+- Metric (?) 
 - Run baseline and evaluate ()
+  - SwinIR(√) Mar.26 by WGC
+  - Unet(√) Mar.27 by WGC
+  - Restormer(√) Mar.28 by ZGH
+  ** There is a data bug (Mar.28)
 - draw paper()
 
 ## Training
