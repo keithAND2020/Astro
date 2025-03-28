@@ -17,7 +17,8 @@ This repo is used for super-resolution in astronomy.
   - SwinIR(√) Mar.26 by WGC
   - Unet(√) Mar.27 by WGC
   - Restormer(√) Mar.28 by ZGH
-  ** There is a data bug (Mar.28)
+  
+** There is a data bug (Mar.28) 
 - draw paper()
 
 ## Training
