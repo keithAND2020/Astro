@@ -9,7 +9,7 @@ import numpy as np
 from shapely.geometry import Polygon
 import shapely.wkt
 import pdb
-TEMP_NUM = 500
+TEMP_NUM = 200
 data_dir = "/ailab/group/pjlab-ai4s/ai4astro/Deep_space_explore/hst_data/"
 output_file = "/ailab/user/wuguocheng/Astro_SR/data_process/split_file/datasetlist.txt"
 fits_files = []

@@ -10,9 +10,8 @@ import numpy as np
 
 # fits_filepath = train_files[4]
 def load_data(file_path):
-    # 步骤 1：加载图像数据
     with fits.open(file_path) as hdul:
-        img_data = hdul[1].data.astype(float)  # 确保数据类型为浮点数，支持 NaN
+        img_data = hdul[1].data.astype(float)  
 
         # 步骤 2：检测连续全 0 区域
         zero_mask = (img_data == 0)
@@ -29,9 +28,9 @@ def load_data(file_path):
         mask = ~np.isnan(img_data)
 
         return img_data, mask
-fits_filepath = "/ailab/group/pjlab-ai4s/ai4astro/Deep_space_explore/hst_data/hst_12925_09_acs_wfc_total_jbyq09/hst_12925_09_acs_wfc_total_jbyq09_drc.fits.gz"
-hdu = fits.open(fits_filepath)[1]
+fits_filepath = "/ailab/group/pjlab-ai4s/ai4astro/Deep_space_explore/hst_data/hst_skycell-p1364x07y09_wfc3_uvis_f336w_all/hst_skycell-p1364x07y09_wfc3_uvis_f336w_all_drc.fits.gz"
 
+hdu = fits.open(fits_filepath)[1]
 print(fits.info(fits_filepath))
 img_data = hdu.data
 # 
@@ -39,9 +38,9 @@ img_data = hdu.data
 norm = ImageNormalize(img_data, interval=ZScaleInterval())
 
 plt.figure(figsize=(16, 16))
-plt.imshow(img_data, cmap='gray', origin='lower', norm=norm)
+plt.imshow(img_data, cmap='gray', norm=norm)
 plt.colorbar(label='Intensity')
 plt.title(f"FITS Image: {fits_filepath}")
 plt.xlabel("X (pixels)")
 plt.ylabel("Y (pixels)")
-plt.savefig('/ailab/user/wuguocheng/Astro_SR/vis/result_fits2.png')
+plt.savefig('/ailab/user/wuguocheng/Astro_SR/vis/result_fits_2.png')
