@@ -1,6 +1,7 @@
 _base_='../default.py'
 seed = 42,
 train = dict(optimizer=dict(lr=1e-4))
+test = dict(vis_dir='/home/bingxing2/ailab/scxlab0061/Astro_SR/vis_results')
 model = dict(type='SwinIR',
              img_size=128, patch_size=1, in_chans=1, out_chans=1,
              embed_dim=90, depths=[6, 6, 6, 6], num_heads=[6, 6, 6, 6],
@@ -20,8 +21,9 @@ model = dict(type='SwinIR',
 
 
 dataset = dict(type='SR_dataset',
-               batch_size=8,
+               batch_size=16,
                num_workers=6,
                root_dir='/ailab/user/wuguocheng/AstroIR/tools/creat_dataset/new_create_dataset/train_patches',
-               filenames_file_train='/ailab/user/wuguocheng/Astro_SR/dataload_filename/trainfile.txt'
+               filenames_file_train='/home/bingxing2/ailab/scxlab0061/Astro_SR/dataload_filename/trainfile.txt',
+               filenames_file_eval='/home/bingxing2/ailab/scxlab0061/Astro_SR/dataload_filename/evalfile.txt'
                )
