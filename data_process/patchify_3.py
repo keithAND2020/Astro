@@ -4,6 +4,7 @@ from astropy.io import fits
 from scipy.ndimage import binary_erosion, generate_binary_structure
 from tqdm import tqdm
 import pdb
+
 def load_data(file_path, hr=True):
     """加载 FITS 文件，返回图像数据和掩码"""
     with fits.open(file_path) as hdul:
@@ -18,35 +19,48 @@ def load_data(file_path, hr=True):
         mask = ~np.isnan(img_data)
         return img_data, mask
 
-def patchify(image, mask, patch_size, stride, useful_region_th=0.8):
-    """将图像分割为 patch，并筛选有效区域"""
+def patchify_hr(image, mask, patch_size=256, stride=128, useful_region_th=0.8):
+    """对 HR 图像进行 Patchify，返回满足阈值的 patch"""
     patches = []
     h, w = image.shape
-    for x_idx in range(0, h - patch_size + 1, stride):
-        for y_idx in range(0, w - patch_size + 1, stride):
-            image_patch = image[x_idx:x_idx + patch_size, y_idx:y_idx + patch_size]
-            mask_patch = mask[x_idx:x_idx + patch_size, y_idx:y_idx + patch_size]
-            if (mask_patch.mean() > useful_region_th and 
-                image_patch.shape[0] == patch_size and 
-                image_patch.shape[1] == patch_size):
-                coordinate = [x_idx, y_idx]
-                patches.append((image_patch, mask_patch, coordinate))
+    for x in range(0, h - patch_size + 1, stride):
+        for y in range(0, w - patch_size + 1, stride):
+            mask_patch = mask[x:x + patch_size, y:y + patch_size]
+            if mask_patch.mean() > useful_region_th:
+                image_patch = image[x:x + patch_size, y:y + patch_size]
+                patches.append((image_patch, mask_patch, (x, y)))
     return patches
 
-def generate_dataloader_txt(hr_patches, lr_patches, hr_patch_dir, lr_patch_dir, dataloader_txt, identifier):
+def get_lr_patch(lr_image, lr_mask, hr_coord, scale_factor=2, lr_patch_size=128, useful_region_th=0.8):
+    """根据 HR patch 坐标从 LR 图像中提取并筛选 LR patch"""
+    x_hr, y_hr = hr_coord
+    x_lr = x_hr // scale_factor
+    y_lr = y_hr // scale_factor
+    lr_mask_patch = lr_mask[x_lr:x_lr + lr_patch_size, y_lr:y_lr + lr_patch_size]
+    if lr_mask_patch.mean() > useful_region_th:
+        lr_image_patch = lr_image[x_lr:x_lr + lr_patch_size, y_lr:y_lr + lr_patch_size]
+        return (lr_image_patch, lr_mask_patch, (x_lr, y_lr))
+    return None
+
+def generate_patch_pairs(hr_image, hr_mask, lr_image, lr_mask, hr_patch_size=256, lr_patch_size=128, stride=128, scale_factor=2, useful_region_th=0.8):
+    """生成 HR 和 LR 的 patch 对"""
+    patch_pairs = []
+    hr_patches = patchify_hr(hr_image, hr_mask, hr_patch_size, stride, useful_region_th)
+    for hr_patch, hr_mask_patch, hr_coord in hr_patches:
+        lr_patch_info = get_lr_patch(lr_image, lr_mask, hr_coord, scale_factor, lr_patch_size, useful_region_th)
+        if lr_patch_info is not None:
+            lr_patch, lr_mask_patch, lr_coord = lr_patch_info
+            patch_pairs.append((hr_patch, hr_mask_patch, hr_coord, lr_patch, lr_mask_patch, lr_coord))
+    return patch_pairs
+
+def generate_dataloader_txt(patch_pairs, hr_patch_dir, lr_patch_dir, dataloader_txt, identifier):
     """保存 HR 和 LR patch 并生成 dataloader.txt"""
     with open(dataloader_txt, "a") as f:
-        for idx, (hr_patch, lr_patch) in enumerate(zip(hr_patches, lr_patches)):
-            hr_image_patch, hr_mask_patch, hr_coord = hr_patch
-            lr_image_patch, lr_mask_patch, lr_coord = lr_patch
-            hr_patch_filename = f"{identifier}_hr_patch_{idx}.npy"
-            hr_patch_path = os.path.join(hr_patch_dir, hr_patch_filename)
-            np.save(hr_patch_path, {"image": hr_image_patch, "mask": hr_mask_patch, "coord": hr_coord})
-            
-            lr_patch_filename = f"{identifier}_lr_patch_{idx}.npy"
-            lr_patch_path = os.path.join(lr_patch_dir, lr_patch_filename)
-            np.save(lr_patch_path, {"image": lr_image_patch, "mask": lr_mask_patch, "coord": lr_coord})
-            
+        for idx, (hr_patch, hr_mask, hr_coord, lr_patch, lr_mask, lr_coord) in enumerate(patch_pairs):
+            hr_patch_path = os.path.join(hr_patch_dir, f"{identifier}_hr_patch_{idx}.npy")
+            np.save(hr_patch_path, {"image": hr_patch, "mask": hr_mask, "coord": hr_coord})
+            lr_patch_path = os.path.join(lr_patch_dir, f"{identifier}_lr_patch_{idx}.npy")
+            np.save(lr_patch_path, {"image": lr_patch, "mask": lr_mask, "coord": lr_coord})
             f.write(f"{hr_patch_path},{lr_patch_path},{hr_coord}\n")
 
 def process_patchify(train_files_path, eval_files_path, dataset_dir, dataload_filename_dir, hr_patch_size=256, lr_patch_size=128, stride=128, useful_region_th=0.8, scale_factor=2):
@@ -76,16 +90,18 @@ def process_patchify(train_files_path, eval_files_path, dataset_dir, dataload_fi
             lr_image, lr_mask = load_data(lr_path, hr=False)
             identifier = os.path.basename(hr_path).replace(".fits", "").replace(".gz", "")
             
-            hr_patches = patchify(hr_image, hr_mask, hr_patch_size, stride, useful_region_th)
-            lr_patches = patchify(lr_image, lr_mask, lr_patch_size, stride // scale_factor, useful_region_th)
+            # 生成 patch 对
+            patch_pairs = generate_patch_pairs(hr_image, hr_mask, lr_image, lr_mask, 
+                                               hr_patch_size=hr_patch_size, lr_patch_size=lr_patch_size, 
+                                               stride=stride, scale_factor=scale_factor, useful_region_th=useful_region_th)
             
-            if len(hr_patches) > 0 and len(lr_patches) > 0:
-                generate_dataloader_txt(hr_patches, lr_patches, train_hr_patch_dir, train_lr_patch_dir, train_dataloader_txt, identifier)
+            if len(patch_pairs) > 0:
+                generate_dataloader_txt(patch_pairs, train_hr_patch_dir, train_lr_patch_dir, train_dataloader_txt, identifier)
                 pdb.set_trace()
             else:
                 print(f"warning: {hr_path} No valid patch")
         except Exception as e:
-            print(f"processing  {hr_path} fail: {e}")
+            print(f"processing {hr_path} fail: {e}")
     
     with open(eval_files_path, "r") as f:
         eval_files = [line.strip().split(',') for line in f.readlines()]
@@ -95,15 +111,17 @@ def process_patchify(train_files_path, eval_files_path, dataset_dir, dataload_fi
             lr_image, lr_mask = load_data(lr_path, hr=False)
             identifier = os.path.basename(hr_path).replace(".fits", "").replace(".gz", "")
             
-            hr_patches = patchify(hr_image, hr_mask, hr_patch_size, stride, useful_region_th)
-            lr_patches = patchify(lr_image, lr_mask, lr_patch_size, stride // scale_factor, useful_region_th)
+            # 生成 patch 对
+            patch_pairs = generate_patch_pairs(hr_image, hr_mask, lr_image, lr_mask, 
+                                               hr_patch_size=hr_patch_size, lr_patch_size=lr_patch_size, 
+                                               stride=stride, scale_factor=scale_factor, useful_region_th=useful_region_th)
             
-            if len(hr_patches) > 0 and len(lr_patches) > 0:
-                generate_dataloader_txt(hr_patches, lr_patches, eval_hr_patch_dir, eval_lr_patch_dir, eval_dataloader_txt, identifier)
+            if len(patch_pairs) > 0:
+                generate_dataloader_txt(patch_pairs, eval_hr_patch_dir, eval_lr_patch_dir, eval_dataloader_txt, identifier)
             else:
                 print(f"warning: {hr_path} No valid patch")
         except Exception as e:
-            print(f"processing  {hr_path} fail: {e}")
+            print(f"processing {hr_path} fail: {e}")
 
 if __name__ == "__main__":
     train_files_path = "/ailab/user/wuguocheng/Astro_SR/data_process/split_file/train_files.txt"

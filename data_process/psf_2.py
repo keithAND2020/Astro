@@ -8,7 +8,7 @@ from astropy.modeling.functional_models import Gaussian2D, AiryDisk2D
 from reproject import reproject_exact
 import numpy as np
 from shapely.wkt import loads
-
+import pdb
 # 生成随机 PSF
 def generate_random_psf(size=15, sigma_range=[0.8, 2.8], radius_range=[1.5, 3.0]):
     """生成随机 PSF，从 Gaussian 和 Airy 中随机选择，并打印参数"""
@@ -29,10 +29,10 @@ def generate_random_psf(size=15, sigma_range=[0.8, 2.8], radius_range=[1.5, 3.0]
         x, y = np.meshgrid(x, y)
         psf = AiryDisk2D(amplitude=1.0, x_0=0, y_0=0, radius=radius)(x, y)
         print(f"Generated Airy PSF with radius = {radius}")
-    return psf / psf.sum()  
+    return psf / psf.sum()
 
-# 加载 FITS 文件
 def load_fits(file_path):
+    """加载 FITS 文件，返回图像数据、掩码和 WCS 信息"""
     with fits.open(file_path) as hdul:
         image = hdul[1].data.astype(float)
         wcs = WCS(hdul[1].header)
@@ -43,8 +43,8 @@ def load_fits(file_path):
             raise ValueError(f"图像 shape {image.shape} 过大，跳过处理")
         return image, mask, wcs
 
-# 应用 PSF 模糊
 def apply_psf(image, psf, mask=None):
+    """应用 PSF 模糊，mask 为 None 时使用图像默认掩码"""
     if mask is None:
         mask = ~np.isnan(image)
     image_temp = np.where(mask, image, 0.0)
@@ -52,8 +52,22 @@ def apply_psf(image, psf, mask=None):
     blurred_image[~mask] = np.nan
     return blurred_image
 
-# 下采样图像
+def pad_to_multiple(image, mask, wcs, multiple=256, pad_value=np.nan):
+    """将图像和掩码 padding 到指定倍数，并更新 WCS"""
+    h, w = image.shape
+    pad_h = (multiple - h % multiple) % multiple  
+    pad_w = (multiple - w % multiple) % multiple  
+    
+    padded_image = np.pad(image, ((0, pad_h), (0, pad_w)), mode='constant', constant_values=pad_value)
+    padded_mask = np.pad(mask, ((0, pad_h), (0, pad_w)), mode='constant', constant_values=False)
+    
+    padded_wcs = wcs.deepcopy()
+    padded_wcs.array_shape = padded_image.shape
+    
+    return padded_image, padded_mask, padded_wcs
+
 def downsample_image(image, wcs, scale_factor=2):
+    """下采样图像并更新 WCS"""
     target_shape = (int(image.shape[0] / scale_factor), int(image.shape[1] / scale_factor))
     target_wcs = wcs.deepcopy()
     target_wcs.wcs.crpix = [crpix / scale_factor for crpix in wcs.wcs.crpix]
@@ -64,14 +78,15 @@ def downsample_image(image, wcs, scale_factor=2):
     downsampled_image, _ = reproject_exact((image, wcs), target_wcs, shape_out=target_shape)
     return downsampled_image, target_wcs
 
-# 保存下采样图像
 def save_downsampled_image(image, wcs, output_dir, identifier):
+    """保存下采样后的图像为 FITS 文件"""
     lr_path = os.path.join(output_dir, f"{identifier}_downsampled.fits")
     hdu = fits.PrimaryHDU(image, header=wcs.to_header())
     hdu.writeto(lr_path, overwrite=True)
     return lr_path
 
 def process_fits_files(datasetlist_path, output_dir, split_file_dir, scale_factor=2):
+    """处理 FITS 文件，生成训练和验证集"""
     os.makedirs(split_file_dir, exist_ok=True)
     train_files_path = os.path.join(split_file_dir, "train_files.txt")
     eval_files_path = os.path.join(split_file_dir, "eval_files.txt")
@@ -99,35 +114,35 @@ def process_fits_files(datasetlist_path, output_dir, split_file_dir, scale_facto
                         ra_values = [point[0] for point in polygon.exterior.coords]
                         min_ra = min(ra_values)
                         max_ra = max(ra_values)
-                        image, _, _ = load_fits(fits_filepath)
+                        image, mask, wcs = load_fits(fits_filepath)
+                        # Padding 图像和掩码
+                        padded_image, padded_mask, padded_wcs = pad_to_multiple(image, mask, wcs, multiple=256, pad_value=np.nan)
                         if max_ra < 250:
-                            train_files.append(fits_filepath)
+                            train_files.append((fits_filepath, padded_image, padded_mask, padded_wcs))
                         elif min_ra > 255:
-                            eval_files.append(fits_filepath)
+                            eval_files.append((fits_filepath, padded_image, padded_mask, padded_wcs))
             except ValueError as ve:
                 print(f"skip {fits_filepath}: {ve}")
             except Exception as e:
                 print(f"skip {fits_filepath} fail: {e}")
 
         with open(train_files_path, "w") as f_train, open(eval_files_path, "w") as f_eval:
-            for fits_filepath in tqdm(train_files, desc="processing train files"):
+            for fits_filepath, padded_image, padded_mask, padded_wcs in tqdm(train_files, desc="Processing train files"):
                 try:
-                    image, mask, wcs = load_fits(fits_filepath)
                     psf = generate_random_psf()
-                    blurred_image = apply_psf(image, psf, mask=mask)
-                    downsampled_image, target_wcs = downsample_image(blurred_image, wcs, scale_factor)
+                    blurred_image = apply_psf(padded_image, psf, mask=padded_mask)
+                    downsampled_image, target_wcs = downsample_image(blurred_image, padded_wcs, scale_factor)
                     identifier = os.path.basename(fits_filepath).replace(".fits", "").replace(".gz", "")
                     lr_path = save_downsampled_image(downsampled_image, target_wcs, output_dir, identifier)
                     f_train.write(f"{fits_filepath},{lr_path}\n")
                 except Exception as e:
-                    print(f"processing {fits_filepath} fail: {e}")
+                    print(f"Processing {fits_filepath} fail: {e}")
 
-            for fits_filepath in tqdm(eval_files, desc="Processing validation set files"):
+            for fits_filepath, padded_image, padded_mask, padded_wcs in tqdm(eval_files, desc="Processing validation set files"):
                 try:
-                    image, mask, wcs = load_fits(fits_filepath)
                     psf = generate_random_psf()
-                    blurred_image = apply_psf(image, psf, mask=mask)
-                    downsampled_image, target_wcs = downsample_image(blurred_image, wcs, scale_factor)
+                    blurred_image = apply_psf(padded_image, psf, mask=padded_mask)
+                    downsampled_image, target_wcs = downsample_image(blurred_image, padded_wcs, scale_factor)
                     identifier = os.path.basename(fits_filepath).replace(".fits", "").replace(".gz", "")
                     lr_path = save_downsampled_image(downsampled_image, target_wcs, output_dir, identifier)
                     f_eval.write(f"{fits_filepath},{lr_path}\n")

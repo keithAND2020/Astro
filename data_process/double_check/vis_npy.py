@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from astropy.visualization import (ZScaleInterval, ImageNormalize)
 import pdb
 # 加载 .npy 文件
-patch_data = np.load('/ailab/user/wuguocheng/Astro_SR/dataset/train_hr_patch/jd8f28020_drc_hr_patch_400.npy', allow_pickle=True).item()
+patch_data = np.load('/ailab/user/wuguocheng/Astro_SR/dataset/train_hr_patch/hst_9822_6x_acs_wfc_total_j8pu6x_drc_hr_patch_17.npy', allow_pickle=True).item()
 # 提取图像和掩码
 image = patch_data['image']
 mask = patch_data['mask']
@@ -20,4 +20,4 @@ axes[1].imshow(mask, cmap='gray', origin='lower')
 axes[1].set_title('Mask Patch')
 
 # 显示图像
-plt.savefig("/ailab/user/wuguocheng/Astro_SR/vis/vis_npy_lr_3.png")
+plt.savefig("/ailab/user/wuguocheng/Astro_SR/vis/vis_npy_lr_.png")

@@ -12,25 +12,18 @@ import numpy as np
 def load_data(file_path):
     with fits.open(file_path) as hdul:
         img_data = hdul[1].data.astype(float)  
-
-        # 步骤 2：检测连续全 0 区域
         zero_mask = (img_data == 0)
-
-        # 使用形态学腐蚀操作，识别连续全 0 区域
         structure = generate_binary_structure(2, 1)  # 3x3 结构元素
         eroded_zero_mask = binary_erosion(zero_mask, structure=structure)
-
-        # 步骤 3：将连续全 0 区域转换为 NaN
-        # eroded_zero_mask 为 True 的地方表示该像素及其 3x3 邻域内全为 0
         img_data[eroded_zero_mask] = np.nan
 
         # 步骤 4：生成掩码
         mask = ~np.isnan(img_data)
 
         return img_data, mask
-fits_filepath = "/ailab/group/pjlab-ai4s/ai4astro/Deep_space_explore/hst_data/hst_skycell-p1364x07y09_wfc3_uvis_f336w_all/hst_skycell-p1364x07y09_wfc3_uvis_f336w_all_drc.fits.gz"
+fits_filepath = "/ailab/user/wuguocheng/Astro_SR/dataset/psf_downsampled/jd8f28020_drc_downsampled.fits"
 
-hdu = fits.open(fits_filepath)[1]
+hdu = fits.open(fits_filepath)[0]
 print(fits.info(fits_filepath))
 img_data = hdu.data
 # 
@@ -43,4 +36,4 @@ plt.colorbar(label='Intensity')
 plt.title(f"FITS Image: {fits_filepath}")
 plt.xlabel("X (pixels)")
 plt.ylabel("Y (pixels)")
-plt.savefig('/ailab/user/wuguocheng/Astro_SR/vis/result_fits_2.png')
+plt.savefig('/ailab/user/wuguocheng/Astro_SR/vis/result_fits_3.png')
