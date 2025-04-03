@@ -245,7 +245,7 @@ class PromptGenBlock(nn.Module):
 ##########################################################################
 ##---------- PromptIR -----------------------
 @MODEL.register
-class PromptIR(nn.Module):
+class PromptIR(Base_Model):
     def __init__(self, 
         inp_channels=3, 
         out_channels=3, 
@@ -257,9 +257,10 @@ class PromptIR(nn.Module):
         bias = False,
         LayerNorm_type = 'WithBias',   ## Other option 'BiasFree'
         decoder = False,
+        **kwargs
     ):
 
-        super(PromptIR, self).__init__()
+        super(PromptIR, self).__init__(**kwargs)
 
         self.patch_embed = OverlapPatchEmbed(inp_channels, dim)
         
