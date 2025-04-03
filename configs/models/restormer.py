@@ -21,7 +21,7 @@ model = dict(type='Restormer',inp_channels=1,out_channels=1,dim=48,num_blocks=[4
 
 
 dataset = dict(type='SR_dataset',
-               batch_size=12,
+               batch_size=8,
                num_workers=6,
                root_dir='/home/bingxing2/ailab/zhuangguohang/Astro_SR/Astro_SR/dataset',
                filenames_file_train='/home/bingxing2/ailab/group/ai4astro/Datasets/Astro_SR/train_dataloader.txt',
