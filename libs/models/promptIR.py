@@ -320,7 +320,7 @@ class PromptIR(Base_Model):
 
         self.decoder_level1 = nn.Sequential(*[TransformerBlock(dim=int(dim*2**1), num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor, bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_blocks[0])])
         
-        self.refinement = nn.Sequential(*[TransformerBlock(dim=int(dim*2**1), num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor, bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_refinement_blocks)])
+        self.refinement = nn.Sequential(*[TransformerBlock(dim=int(dim*1**1), num_heads=heads[0], ffn_expansion_factor=ffn_expansion_factor, bias=bias, LayerNorm_type=LayerNorm_type) for i in range(num_refinement_blocks)])
                     
         self.output = nn.Conv2d(int(dim*1**1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
@@ -376,9 +376,9 @@ class PromptIR(Base_Model):
         
         out_dec_level1 = self.decoder_level1(inp_dec_level1)
 
-
-        out_dec_level1 = self.refinement(out_dec_level1)
         out_dec_level1 = self.up3_1(out_dec_level1)###添加
+        out_dec_level1 = self.refinement(out_dec_level1)
+        
 
         out_dec_level1 = self.output(out_dec_level1)# + inp_img
         # if self.training:
