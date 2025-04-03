@@ -34,9 +34,11 @@ BATCH_JOB_ID=$5
 
 # logs
 echo "$NODE_RANK,$NODES,$NPROC_PER_NODE,$MASTER_ADDR,$BATCH_JOB_ID"
-OUTPUT_LOG="/home/bingxing2/ailab/zhuangguohang/Astro_SR/Astro_SR/slurm_output/train_rank${NODE_RANK}_${BATCH_JOB_ID}.log"
 
-CONFIG="configs/models/promptIR.py"
+MODEL_NAME='promptIR'
+OUTPUT_LOG="/home/bingxing2/ailab/zhuangguohang/Astro_SR/Astro_SR/slurm_output/train_rank_${MODEL_NAME}_${NODE_RANK}_${BATCH_JOB_ID}.log"
+
+CONFIG="configs/models/${MODEL_NAME}.py"
 
 torchrun \
      --nnodes="${NODES}" \
@@ -44,4 +46,4 @@ torchrun \
      --nproc_per_node="${NPROC_PER_NODE}" \
      --master_addr="${MASTER_ADDR}" \
      --master_port="${MASTER_PORT}" \
-     tools/trainval.py ${CONFIG} --launcher="slurm" --log_dir='log/restormer' >> "${OUTPUT_LOG}" 2>&1
+     tools/trainval.py ${CONFIG} --launcher="slurm" --log_dir="${MODEL_NAME}" >> "${OUTPUT_LOG}" 2>&1
