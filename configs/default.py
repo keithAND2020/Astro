@@ -1,12 +1,13 @@
 seed = 42,
-train = dict(max_epoch=10,
+train = dict(max_epoch=60,
             save_ckp_epoch=1,
             eval_epoch=1,
             display_iter=10,
             grad_clip=None, #dict(max_norm=20, norm_type=2),
             optimizer=dict(
                 type='Adam',
-                lr=1e-3),   
+                lr=1e-4,
+                betas=(0.9, 0.999)),   
             scheduler=dict(
                  warm_up = dict(
                       type='linear',
@@ -19,7 +20,7 @@ train = dict(max_epoch=10,
                       type='cos',  #cos, step
                       step_type='iter',
                       # decay_ratio=0.1,  # step decay parameters
-                      steps=[40],
+                      steps=[40,60],
                       steps_unit='epoch')      
             )),
 
